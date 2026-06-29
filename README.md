@@ -45,10 +45,10 @@ Compile the design and view the hardware trace layout via Icarus Verilog and GTK
 
 ```bash
 # Compile the module and testbench together
-iverilog -o mips_pmu_sim pipe_MIPS32.v tb_pipe_MIPS32.v
+iverilog -o sim_mips21 pipe_MIPS32.v tb_pipe_MIPS32.v
 
 # Execute simulation to generate trace file (.vcd)
-vvp mips_pmu_sim
+vvp sim_mips21
 
 # Open trace file inside GTKWave
 gtkwave mips_pipeline.vcd
