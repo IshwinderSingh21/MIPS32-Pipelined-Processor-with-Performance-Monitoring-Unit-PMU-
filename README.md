@@ -1,43 +1,36 @@
 # MIPS32 Pipelined Processor with Performance Monitoring Unit (PMU)
 
-A structural-behavioral 5-stage pipelined MIPS32 processor core engineered in Verilog. This architecture replaces complex dynamic hazard-forwarding logic with a predictable, hazard-free software-spaced configuration using a non-FIFO, dual-phase clocking scheme. To profile execution overhead dynamically, the design features an embedded silicon-level Performance Monitoring Unit (PMU) that tracks clock cycles, instruction retirement rates, and core CPI metrics in real time.
+A clean, structural-behavioral 5-stage pipelined MIPS32 processor core implemented in Verilog. This architecture focuses on a streamlined baseline pipeline design where data dependencies and hazards are handled cleanly at the software layer using explicit spacing. To dynamically profile execution efficiency, the core features an integrated silicon-level Performance Monitoring Unit (PMU) that tracks clock cycles, instruction retirement rates, and real-world CPI metrics.
 
 ---
 
 ## 📖 Architectural Design & Overview
 
-Traditional basic pipeline layouts operate as architectural "black boxes"—making tracking and diagnostic monitoring on real hardware highly opaque. This processor implements an external observation layer directly on top of a classic RISC execution datapath. 
+Traditional pipeline implementations often become highly complex due to massive, error-prone bypass networks and hardware interlocking blocks. This processor layout takes a different approach: it keeps the physical stage datapaths completely lean and high-frequency by offloading dependency management entirely to software spacing. 
 
-Instead of routing massive, error-prone bypass busses across long silicon distances to fix data dependencies dynamically, this design decouples the hazards at the software layer using explicit spacing constraints. This layout allows for high-frequency operations by keeping the logic pathways of individual stages incredibly lean.
-
-[Image of 5 stage MIPS pipeline datapath]
-
-### The Non-FIFO Dual-Phase Clocking Strategy
-The processor operates using two discrete clock trees (`clk1` and `clk2`) running completely out of phase:
-* **`clk1`** drives the Instruction Fetch (IF), Execute (EX), and Write Back (WB) stages.
-* **`clk2`** drives the Instruction Decode (ID) and Memory Access (MEM) stages.
-
-By shifting consecutive execution segments onto alternating half-cycles, the architecture eliminates the requirement for complex structural FIFO buffers between pipeline registers, ensuring synchronized data transitions across stage boundaries.
+By utilizing explicit code padding constraints, each instruction is guaranteed to have fully completed its write-back cycle before subsequent dependent operations read the register file. Built directly on top of this streamlined execution stream is an independent hardware analysis layer that tracks exactly how well the program is running.
 
 ---
 
 ## 🧩 The 5 Core Pipeline Stages
 
-The structural execution stream splits the instruction lifecycle across 5 distinct hardware domains:
 
-1. **Instruction Fetch (IF):** Evaluates branch target decisions from the EX/MEM stage or increments the Program Counter (`PC`) consecutively by 4 bytes to latch the next machine word from instruction memory (`Mem`).
-2. **Instruction Decode (ID):** Maps instructions into structural parameters (`RR_ALU`, `RM_ALU`, `LOAD`, `STORE`, `BRANCH`), extracts immediate values with full 32-bit sign extension, and retrieves operands out of the Register File (`Reg`).
-3. **Execute (EX):** Computes operations through a custom combinational logic unit supporting standard math, comparison arrays, logical strings, and dedicated hardware-level multiplication blocks (`MUL`).
-4. **Memory Access (MEM):** Handles data memory interfaces. Reads data words from RAM via Load Word (`LW`) using the ALU output as an address, or commits data directly to storage during Store Word (`SW`) cycles.
-5. **Write Back (WB):** Commits retired computation results or memory read streams permanently back into the target destination register within the Register File and checks for termination codes (`HLT`) to safely park the core.
+
+The execution datapath divides the instruction lifecycle across 5 classic synchronous hardware domains:
+
+1. **Instruction Fetch (IF):** Evaluates branch target updates from the MEM stage or increments the Program Counter (`PC`) consecutively by 4 bytes to pull the next 32-bit machine word from instruction memory (`Mem`).
+2. **Instruction Decode (ID):** Decodes raw instruction bits into core structural execution types (`RR_ALU`, `RM_ALU`, `LOAD`, `STORE`, `BRANCH`), handles 32-bit sign extension for immediates, and reads source operands out of the Register File (`Reg`).
+3. **Execute (EX):** Computes arithmetic, logical, and comparison operations via a combinational ALU, featuring an integrated dedicated hardware multiplication array (`MUL`). It also evaluates branch conditions and calculates target addresses.
+4. **Memory Access (MEM):** Interacts with the data memory layout. Reads data words from RAM via Load Word (`LW`) or writes register contents straight to a target address during Store Word (`SW`) cycles.
+5. **Write Back (WB):** The final retirement stage. Commits computational data or memory read streams permanently back into the destination registers inside the main Register File and monitors the master termination flag (`HLT`) to safely stop the simulation.
 
 ---
 
 ## 📊 Performance Monitoring Unit (PMU) Diagnostics
 
-The embedded **Performance Monitoring Unit (PMU)** acts as an on-chip logic analyzer, tapping directly into pipeline register control lines from the outside to generate concrete performance analytics:
+The embedded **Performance Monitoring Unit (PMU)** acts as an on-chip logic analyzer, tapping directly into pipeline stage registers from the outside to generate concrete performance analytics:
 
-* **Total Clock Cycles:** Measures absolute hardware execution duration.
+* **Total Clock Cycles:** Measures absolute hardware execution runtime.
 * **Instructions Retired:** Increments only when a valid operation clears the final Write Back stage (ignoring padding or speculative entries).
 * **Software-Injected Bubbles:** Measures the exact code density overhead required to maintain data dependency safety.
 * **Core CPI Computation:** Computes the mathematical efficiency threshold of the compilation stream:
@@ -48,7 +41,7 @@ The embedded **Performance Monitoring Unit (PMU)** acts as an on-chip logic anal
 ## 🚀 Simulation Commands & Verification Waveforms
 
 ### 1. Toolchain Setup
-Compile the design and view the hardware trace layout via Icarus Verilog and GTKWave using your terminal terminal engine:
+Compile the design and view the hardware trace layout via Icarus Verilog and GTKWave using your terminal engine:
 
 ```bash
 # Compile the module and testbench together
